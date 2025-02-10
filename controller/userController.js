@@ -2,7 +2,7 @@ import User from "../model/user.js";
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid'; 
 import bcrypt from 'bcrypt';
-
+import jwt from 'jsonwebtoken';
 const transpoter=nodemailer.createTransport({
     service:"gmail",
     host:"smtp.gmail.com",
@@ -54,11 +54,14 @@ export const loginUser=async(req,res)=>{
             return res.status(400).json({message:"all fields are requeied"});
         }
         const user=await User.findOne({username});
+        console.log("login user1223",user);
         if(!user){
             return res.status(402).json({message:"user not found"});
         }
-        const isMathcPassword=await bcrypt.compare(password,user.password);
-        if(!isMathcPassword){
+        console.log("user login",user);
+        const isMatchPassword = await user.isValidPassword(password);
+        console.log("ismatch password",isMatchPassword);
+        if(!isMatchPassword){
             return res.status(401).json({message:"password does not match"});
         }
         if(user.verificationToken!=null){
@@ -72,6 +75,46 @@ export const loginUser=async(req,res)=>{
     }catch(err){
         console.log("error",err);
         return res.status(400).json({message:"failed to login"});
+
+    }
+}
+
+export const forgotPassword=async(req,res)=>{
+    try{
+        const{email}=req.body;
+        if(!email){
+            return res.status(400).json({message:"Email fields are reruied"});
+
+        }
+        const user=await User.findOne({email});
+        if(!user){
+            return res.status(404).json({message:"User not found"});
+        }
+        const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET,{ expiresIn: "15m" });
+        user.resetToken = resetToken;
+        user.resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+        await user.save();
+
+        const resetLink = `http://localhost:8000/reset-password/${resetToken}`;
+        const mailOption={
+           from:process.env.EMAIL,
+           to:email,
+           subject:"Reset your password",
+           html: `
+                <h2>Hello,</h2>
+                <p>Click the link below to reset your password:</p>
+                <a href="${resetLink}" target="_blank">Reset Password</a>
+                <p>This link is valid for 15 minutes.</p>
+            `,
+        }
+        await transpoter.sendMail(mailOption); 
+        res.status(200).json({ message: "Password reset link sent to email!" });
+
+
+
+    }catch(err){
+        console.log("error",err);
+        return res.status(401).json({message:"Failed to send email"});
 
     }
 }

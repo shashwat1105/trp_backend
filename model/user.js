@@ -10,6 +10,8 @@ const userSchema=new mongoose.Schema(
     username:{type:String ,required:true},
     isVerified:{type:Boolean,default:false},
     verificationToken:{type:String},
+    resetToken: { type: String, default: null },
+    resetTokenExpires: { type: Date, default: null },
     role:{type:String,enum:["Admin","User"],default:"User"},
   },
   {timestamps: true }
@@ -21,8 +23,8 @@ userSchema.pre("save",async function(next){
   next();
 })
 
-userSchema.methods.isValidPassword=async function(password){
-  return bcrypt.compare(this.password,password);
+userSchema.methods.isValidPassword = async function(password) {
+  return bcrypt.compare(password, this.password);
 }
 
 const User = mongoose.model("User", userSchema);
