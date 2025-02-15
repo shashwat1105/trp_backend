@@ -1,7 +1,6 @@
 import User from "../model/user.js";
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid'; 
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 const transpoter=nodemailer.createTransport({
     service:"gmail",
